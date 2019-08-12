@@ -20,7 +20,7 @@ namespace TokenService
             timer = new Timer(TimeSpan.FromSeconds(10).TotalMilliseconds);
             timer.Start();
             timer.Enabled = true;
-            timer.Elapsed += new ElapsedEventHandler(Timer_Elapsed);
+            timer.Elapsed += new ElapsedEventHandler(Timer_ElapsedAsync);
         }
 
         protected override void OnStop()
@@ -28,13 +28,13 @@ namespace TokenService
             timer.Stop();
         }
 
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private async void Timer_ElapsedAsync(object sender, ElapsedEventArgs e)
         {
             try
             {
                 timer.Enabled = false;
                 var target = new Token();
-                var token = target.ObterToken();
+                var token = await target.ObterTokenAsync();
             }
             catch (Exception ex)
             {
