@@ -16,30 +16,30 @@ namespace TokenService
     {
         private AccessToken _accessToken = new AccessToken();
 
-        public async Task<string> ObterTokenAsync()
+        public async Task<string> ObterTokenAsync(Tra tra)
         {
             if (HealthCheck())
             {
-                if (!VerificarTokenExiste()) return _accessToken.access_token;
+                if (!VerificarTokenExiste(tra)) return _accessToken.access_token;
                 try
                 {
-                    await ObterTokenParceiro();
-                    GravarToken(_accessToken.access_token, _accessToken.expires_in);
+                    await ObterTokenParceiro(tra);
+                    GravarToken(_accessToken.access_token, _accessToken.expires_in, tra);
                 }
-                catch (Exception)
+                catch (Exception err)
                 {
-                    throw new Exception("Não foi possível obter o Token!");
+                    throw new Exception($"Não foi possível obter o Token! + {err.Message}");
                 }
                 return _accessToken.access_token;
             }
             else
             {
-                await ObterTokenParceiro();
+                await ObterTokenParceiro(tra);
                 return _accessToken.access_token;
             }
         }
 
-        private async Task ObterTokenParceiro()
+        private async Task ObterTokenParceiro(Tra tra)
         {
             var policy = Policy.Handle<Exception>(e =>
                 {
@@ -49,15 +49,15 @@ namespace TokenService
 
             await policy.ExecuteAsync(async () =>
             {
-                await RetornarToken();
+                await RetornarToken(tra);
             });
         }
 
-        private async Task RetornarToken()
+        private async Task RetornarToken(Tra tra)
         {
-            string hostIdentityServer = "http://gmci.bandeiranteslog.com.br:3010/api/oauth/token";
-            string usuario = "btp";
-            string senha = "BR@51lT3rMiN4L";
+            string hostIdentityServer = tra.Url;
+            string usuario = tra.Username;
+            string senha = tra.Password;
             _accessToken = ObterTokenPorUsuario(hostIdentityServer, usuario, senha);
         }
 
@@ -65,7 +65,7 @@ namespace TokenService
         {
             using (var client = new HttpClient())
             {
-                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
+                //ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
                 //Define Headers
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -92,42 +92,49 @@ namespace TokenService
 
         public class AccessToken
         {
-            [JsonProperty(PropertyName = "AccessToken")]
+            [JsonProperty(PropertyName = "access_token")]
             public string access_token { get; set; }
 
-            [JsonProperty(PropertyName = "accessTokenExpiresAt")]
+            //[JsonProperty(PropertyName = "accessTokenExpiresAt")]
             public string expires_in { get; set; }
             public string token_type { get; set; }
 
         }
 
-        private bool VerificarTokenExiste()
+        private bool VerificarTokenExiste(Tra tra)
         {
             using (ConnectionMultiplexer connectionRedis = ConnectionMultiplexer.Connect("localhost:6379"))
             {
                 IDatabase clientRedis = connectionRedis.GetDatabase();
-                _accessToken.access_token = clientRedis.StringGet("038");
-                var tempoToken = clientRedis.KeyTimeToLive("038");
+                _accessToken.access_token = clientRedis.StringGet(tra.CodDte);
+                var tempoToken = clientRedis.KeyTimeToLive(tra.CodDte);
                 return string.IsNullOrEmpty(_accessToken.access_token);
             }
         }
 
-        private void GravarToken(string token, string expireTime)
+        private void GravarToken(string token, string expireTime, Tra tra)
         {
             using (ConnectionMultiplexer connectionRedis = ConnectionMultiplexer.Connect("localhost:6379"))
             {
                 IDatabase clientRedis = connectionRedis.GetDatabase();
-                clientRedis.StringSet("038", token);
-                //Console.WriteLine(clientRedis.StringGet("038"));
-                clientRedis.KeyExpire("038", TimeSpan.FromSeconds(ConverterTempo(expireTime)));
-                //Console.WriteLine(clientRedis.KeyTimeToLive("admin_sistema"));
+                clientRedis.StringSet(tra.CodDte, token);
+                clientRedis.KeyExpire(tra.CodDte, TimeSpan.FromSeconds(ConverterTempo(expireTime)));
                 connectionRedis.Close();
             }
         }
 
         private double ConverterTempo(string expireTime)
         {
-            var _expiresAt = Convert.ToDateTime(expireTime).AddMinutes(-10);
+            if (string.IsNullOrEmpty(expireTime))
+                expireTime = "10800";
+
+            DateTime _expiresAt;
+            DateTime date;
+
+            _expiresAt = DateTime.TryParse(expireTime, out date) ? 
+                date.AddMinutes(-10) : 
+                DateTime.Now.AddSeconds(Convert.ToDouble(expireTime)).AddMinutes(-10);
+
             return _expiresAt.Subtract(DateTime.Now).TotalSeconds;
         }
 
@@ -145,6 +152,58 @@ namespace TokenService
                     return false;
                 }
             }
+        }
+
+        public class Tra
+        {
+            public string CodDte { get; set; }
+            public string Url { get; set; }
+            public string Username { get; set; }
+            public string Password { get; set; }
+        }
+
+        public List<Token.Tra> CriarListaTra()
+        {
+            var listaTra = new List<Token.Tra>();
+
+            var traEcoPorto = new Token.Tra()
+            {
+                CodDte = "037",
+                Url = "http://webapi.ecoportosantos.com.br:9991/eGMCI/api/token",
+                Username = "BTP846",
+                Password = "ZNhMFbW4w0BA9ki3"
+            };
+
+            var traTransbrasa = new Token.Tra()
+            {
+                CodDte = "050",
+                Url = "https://egmci.transbrasa.com.br/OperadorTransbrasa/Token",
+                Username = "btp_egmci",
+                Password = "BTP@1020"
+            };
+
+            var traMarimex = new Token.Tra()
+            {
+                CodDte = "076",
+                Url = "https://wservices.marimex.com.br/egmci/token",
+                Username = "04887625000178",
+                Password = "3EDF2EBB-2121-4B75-AACA-8EA0CDE70F95"
+            };
+
+            var traBandeirantes = new Token.Tra()
+            {
+                CodDte = "096",
+                Url = "http://gmci.bandeiranteslog.com.br:3010/api/oauth/token",
+                Username = "btp",
+                Password = "BR@51lT3rMiN4L"
+            };
+
+            listaTra.Add(traEcoPorto);
+            listaTra.Add(traTransbrasa);
+            listaTra.Add(traMarimex);
+            listaTra.Add(traBandeirantes);
+
+            return listaTra;
         }
     }
 }

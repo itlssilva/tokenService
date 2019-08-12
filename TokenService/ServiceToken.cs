@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.ServiceProcess;
 using System.Timers;
@@ -34,7 +35,13 @@ namespace TokenService
             {
                 timer.Enabled = false;
                 var target = new Token();
-                var token = await target.ObterTokenAsync();
+
+                var lista = new Token().CriarListaTra();
+
+                foreach (var item in lista)
+                {
+                    var token = await target.ObterTokenAsync(item);
+                }
             }
             catch (Exception ex)
             {
@@ -45,5 +52,8 @@ namespace TokenService
                 timer.Enabled = true;
             }
         }
+
+        
+        
     }
 }
