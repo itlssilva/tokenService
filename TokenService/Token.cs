@@ -166,42 +166,16 @@ namespace TokenService
         {
             var listaTra = new List<Token.Tra>();
 
-            var traEcoPorto = new Token.Tra()
+            var traPoc = new Token.Tra()
             {
-                CodDte = "037",
-                Url = "http://webapi.ecoportosantos.com.br:9991/eGMCI/api/token",
-                Username = "BTP846",
-                Password = "ZNhMFbW4w0BA9ki3"
+                CodDte = "007",
+                Url = "http://webapi.trapoc.com.br:3333/eGMCI/api/token",
+                Username = "TESTpoc",
+                Password = "passPoc"
             };
 
-            var traTransbrasa = new Token.Tra()
-            {
-                CodDte = "050",
-                Url = "https://egmci.transbrasa.com.br/OperadorTransbrasa/Token",
-                Username = "btp_egmci",
-                Password = "BTP@1020"
-            };
-
-            var traMarimex = new Token.Tra()
-            {
-                CodDte = "076",
-                Url = "https://wservices.marimex.com.br/egmci/token",
-                Username = "04887625000178",
-                Password = "3EDF2EBB-2121-4B75-AACA-8EA0CDE70F95"
-            };
-
-            var traBandeirantes = new Token.Tra()
-            {
-                CodDte = "096",
-                Url = "http://gmci.bandeiranteslog.com.br:3010/api/oauth/token",
-                Username = "btp",
-                Password = "BR@51lT3rMiN4L"
-            };
-
-            listaTra.Add(traEcoPorto);
-            listaTra.Add(traTransbrasa);
-            listaTra.Add(traMarimex);
-            listaTra.Add(traBandeirantes);
+            
+            listaTra.Add(traPoc);
 
             return listaTra;
         }
